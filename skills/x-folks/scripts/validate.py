@@ -67,6 +67,9 @@ def render(data):
 
 
 def main():
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     if len(sys.argv) > 2:
         print("INPUT: expected one JSON path or stdin", file=sys.stderr)
         return 2

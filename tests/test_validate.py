@@ -15,6 +15,7 @@ def run(payload):
         [sys.executable, str(SCRIPT), "-"],
         input=json.dumps(payload, ensure_ascii=False),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         check=False,
     )
@@ -92,7 +93,7 @@ class ValidateTests(unittest.TestCase):
     def test_invalid_json_rejected(self):
         result = subprocess.run(
             [sys.executable, str(SCRIPT), "-"],
-            input="{invalid", capture_output=True, text=True, check=False,
+            input="{invalid", capture_output=True, text=True, encoding="utf-8", check=False,
         )
         self.assertEqual(result.returncode, 2)
         self.assertFalse(result.stdout)
