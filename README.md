@@ -1,64 +1,69 @@
 # X folks
 
-**本文3行で答えを完結させ、根拠だけを後ろに置く**文章校正Skillです。X向けの極短文を求められたとき、LLMに結論・条件・数値を優先させます。
+**本文3行で答えを完結させ、根拠だけを後ろに置く**文章校正Skillです。成功・失敗・未完了の理由を本文に含め、読者が「なぜ？」と聞き返す原因を減らします。
 
-## 特徴
+## 仕様
 
-- 本文は1〜3行、1行80文字以内。資料への丸投げや根拠欄への説明逃げを禁止します。
-- 本文に書いた発言と、実在するファイル位置・URLを対応付けます。
-- Python 3の標準ライブラリだけで形式を検査します。Pythonがなくても指示文による自己点検は可能です。
+- 本文は1〜3行、1行80文字以内。結論・理由・必要な条件を残し、回答を別資料へ逃がしません。
+- 根拠欄は本文の引用ではなく、資料が裏付ける対象の短い要約を使います。
+- 同名ファイルは区別できる短いパスで表示します。Codexではインラインコード、Markdown対応環境では短い表示名付きリンクを使います。
+- Python 3の標準ライブラリだけで形式を検査できます。PythonなしでもSkillの自己点検指示は機能します。
 
 ## 導入
 
-リポジトリの作業ディレクトリから、Skillフォルダを利用するエージェントのSkill配置先にコピーまたはリンクしてください。Codexのユーザー共通配置先の例は、Windowsで `$HOME\.agents\skills\x-folks`、macOSとLinuxで `~/.agents/skills/x-folks` です。
-
-Windows（PowerShell、作業ディレクトリはリポジトリのルート）:
+リポジトリのルートで実行します。Windowsの作業ディレクトリ例は `C:\work\x-folks` です。
 
 ~~~powershell
 New-Item -ItemType Directory -Force "$HOME\.agents\skills"
 New-Item -ItemType Junction -Path "$HOME\.agents\skills\x-folks" -Target (Resolve-Path ".\skills\x-folks")
 ~~~
 
-macOS・Linux（作業ディレクトリはリポジトリのルート）:
+macOS・Linuxの場合：
 
 ~~~sh
 mkdir -p "$HOME/.agents/skills"
 ln -s "$(pwd)/skills/x-folks" "$HOME/.agents/skills/x-folks"
 ~~~
 
-配置先に同名のSkillがある場合は、既存の内容を確認してから入れ替えてください。新しいセッションでSkillを明示的に呼び出すと動作確認できます。
+期待結果は共通Skill配置先の `x-folks/SKILL.md` と `x-folks/scripts/validate.py` を参照できる状態です。既存の同名Skillを確認せず上書きしないでください。追加後は新しいセッションで呼び出します。
 
-## 監査の使い方
+## 監査
 
-作業ディレクトリ: リポジトリのルート。入力ファイル: `candidate.json`。以下は形式の例であり、架空の出典を事実確認済みと扱わないでください。
+入力JSONは `candidate.json` などの名前で保存します。次は出力形式を示す架空の例です。
 
 ~~~json
 {
-  "lines": ["結論A。", "条件B。"],
+  "lines": [
+    "日本語化のため2 MODの翻訳を追加し、全キーの一致を確認しました。",
+    "画面取得ツールが対象を検出できず、実機検証は未実施です。",
+    "GitHubの認証情報を取得できず、コミット済みですがプッシュは未完了です。"
+  ],
   "evidence": [
-    {"claims": ["結論A", "条件B"], "refs": ["src/main.py:12-18", "https://example.org/spec"]}
+    {"summary": "翻訳追加ファイル", "lines": [1], "refs": ["assets/mod-a/lang/ja_jp.json:1", "assets/mod-b/lang/ja_jp.json:1"]},
+    {"summary": "画面検証失敗の記録", "lines": [2], "refs": ["logs/game-check.txt:1"]},
+    {"summary": "Git認証失敗の記録", "lines": [3], "refs": ["logs/push.txt:1"]}
   ]
 }
 ~~~
 
-Windows:
+Windows（`C:\work\x-folks` から実行）：
 
 ~~~powershell
 py -3 skills\x-folks\scripts\validate.py candidate.json
 ~~~
 
-macOS・Linux:
+macOS・Linux（リポジトリのルートから実行）：
 
 ~~~sh
 python3 skills/x-folks/scripts/validate.py candidate.json
 ~~~
 
-合格時は終了コード0で、標準出力に**本文と根拠欄だけ**が出ます。不合格時は終了コード1、入力エラーは2です。スクリプトは標準入力も受け付けるため、候補ファイルを残す必要はありません。
+終了コード0は合格で、標準出力に本文と根拠欄だけが出ます。形式違反は1、入力エラーは2です。標準入力も利用できます。既定の表示形式はCodex用で、ファイル参照を `mod-a/lang/ja_jp.json:1` のようなインラインコードにします。JSONに `"style": "markdown"` を追加すると `[mod-a/lang/ja_jp.json](assets/mod-a/lang/ja_jp.json#L1)` 形式のリンクを生成します。実際のクリック可否は利用するクライアントによります。
 
-テスト: リポジトリのルートで `py -3 -m unittest discover -s tests -v`（Windows）、または `python3 -m unittest discover -s tests -v` を実行します。成功時は全テストが `OK` で終了します。
+テストはWindowsの `C:\work\x-folks` で `py -3 -m unittest discover -s tests -v`、macOS・Linuxでは同じルートで `python3 -m unittest discover -s tests -v` を実行します。成功時は最後に `OK` と表示されます。
 
-## 保証範囲
+## 制約
 
-スクリプトが検査するのは文字数・行数・JSON形式・出典の記述形式・発言との文字列対応です。回答の完全性、情報の真偽、資料の内容との一致、画面幅による折り返しは保証しません。Skill単体には、全プラットフォームの回答送信を強制的に遮断する共通機能はありません。機械監査を実行できない環境では指示文に従って自己点検します。
+スクリプトが検査できるのは行数・文字数・根拠ラベル・参照形式・行番号です。**理由の妥当性、回答漏れ、資料の実在・意味的な一致、リンクの動作は保証しません。** これらはLLM側で回答前に確認する必要があります。Skill単体には全環境の送信を止める共通機能はありません。
 
-MITライセンスで公開します。
+MITライセンスで公開しています。
